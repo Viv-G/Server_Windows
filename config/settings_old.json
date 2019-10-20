@@ -1,0 +1,19 @@
+{
+        "CameraInit_1": {
+				"intrinsics": [
+                    {
+                        "pxFocalLength": 1464.8,
+                        "type": "radial3",
+                        "width": 1080,
+                        "height": 1920,
+                        "principalPoint": {
+                            "x": 554.0,
+                            "y": 908.7
+                        },
+                        "locked": false
+                    }
+                ],
+                "defaultFieldOfView": 40.64392
+        }
+}
+

@@ -1,0 +1,28 @@
+{
+    "CameraInit_1": {
+        "intrinsics": [
+            {
+                "intrinsicId": 3769820399,
+                "pxInitialFocalLength": 1458.1,
+                "pxFocalLength": 1458.1,
+                "type": "radial3",
+                "width": 1080,
+                "height": 1920,
+                "serialNumber": "F:\\Viv\\Documents\\Uni\\sem1_2019\\FYP\\MESHROOM_LIVESCAN\\Images\\v2\\img\\key",
+                "principalPoint": {
+                    "x": 554.0,
+                    "y": 908.7
+                },
+                "initializationMode": "estimated",
+                "distortionParams": [
+                    0.0,
+                    0.0,
+                    0.0
+                ],
+                "locked": false
+            }
+        ],
+        "defaultFieldOfView": 40.64392,
+        "groupCameraFallback": "folder"
+    }
+}
