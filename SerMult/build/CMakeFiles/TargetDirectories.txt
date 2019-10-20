@@ -1,0 +1,3 @@
+C:/Server/SerMult/build/CMakeFiles/Server.dir
+C:/Server/SerMult/build/CMakeFiles/ALL_BUILD.dir
+C:/Server/SerMult/build/CMakeFiles/ZERO_CHECK.dir

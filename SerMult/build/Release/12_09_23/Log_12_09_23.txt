@@ -1,0 +1,271 @@
+/////////RADIUS OUTLIER REMOVAL/////////
+	Radius: 0.05
+	Min Nearest Neighbors: 10
+
+/////////STATISTICAL OUTLIER REMOVAL/////////
+	Standard Deviation Multiplier: 1
+	Nearest Neighbors: 200
+/////////VOX FILTER/////////
+	Leaf Size: 0.01
+
+/////////SMOOTHING & NORMAL ESTIMATION/////////
+	MLS Search Radius: 0.02
+	Normal Estimation Search Radius: 0.08
+
+/////////POISSON MESHING/////////
+	Poisson Depth: 6
+
+
+/////////START RUN/////////
+
+	Frame Number: 56
+	Cloud Size: 22
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.322747
+	MESH-	PointCloud Size: 41
+
+	Frame Number: 96
+	Cloud Size: 59
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.327125
+	MESH-	PointCloud Size: 41
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.330625
+	MESH-	PointCloud Size: 63
+
+	Frame Number: 133
+	Cloud Size: 93
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.301193
+	MESH-	PointCloud Size: 62
+
+	Frame Number: 171
+	Cloud Size: 97
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.315156
+	MESH-	PointCloud Size: 63
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.300199
+	MESH-	PointCloud Size: 68
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.266302
+	MESH-	PointCloud Size: 68
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.31017
+	MESH-	PointCloud Size: 83
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.277734
+	MESH-	PointCloud Size: 85
+
+	Frame Number: 208
+	Cloud Size: 129
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.306181
+	MESH-	PointCloud Size: 85
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.316156
+	MESH-	PointCloud Size: 87
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.325132
+	MESH-	PointCloud Size: 102
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.286505
+	MESH-	PointCloud Size: 101
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.295733
+	MESH-	PointCloud Size: 129
+
+	Frame Number: 245
+	Cloud Size: 178
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.280576
+	MESH-	PointCloud Size: 152
+
+	Frame Number: 284
+	Cloud Size: 225
+
+	Frame Number: 321
+	Cloud Size: 225
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.26637
+	MESH-	PointCloud Size: 156
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.297721
+	MESH-	PointCloud Size: 159
+
+	Frame Number: 360
+	Cloud Size: 260
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.295151
+	MESH-	PointCloud Size: 160
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.307167
+	MESH-	PointCloud Size: 160
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.319655
+	MESH-	PointCloud Size: 166
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.295309
+	MESH-	PointCloud Size: 166
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.294214
+	MESH-	PointCloud Size: 172
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.274709
+	MESH-	PointCloud Size: 180
+
+	Frame Number: 392
+	Cloud Size: 290
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.3012
+	MESH-	PointCloud Size: 200
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.290227
+	MESH-	PointCloud Size: 203
+
+	Frame Number: 430
+	Cloud Size: 310
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.294215
+	MESH-	PointCloud Size: 203
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.301175
+	MESH-	PointCloud Size: 206
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.293735
+	MESH-	PointCloud Size: 212
+
+	Frame Number: 466
+	Cloud Size: 324
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.334787
+	MESH-	PointCloud Size: 218
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.307421
+	MESH-	PointCloud Size: 221
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.306179
+	MESH-	PointCloud Size: 225
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.300412
+	MESH-	PointCloud Size: 223
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.320144
+	MESH-	PointCloud Size: 230
+
+	Frame Number: 500
+	Cloud Size: 368
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.307178
+	MESH-	PointCloud Size: 233
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.321735
+	MESH-	PointCloud Size: 232
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.294215
+	MESH-	PointCloud Size: 233
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.283771
+	MESH-	PointCloud Size: 235
+
+	Frame Number: 535
+	Cloud Size: 394
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.293054
+	MESH-	PointCloud Size: 240
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.329974
+	MESH-	PointCloud Size: 244
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.287532
+	MESH-	PointCloud Size: 245
+
+	Frame Number: 571
+	Cloud Size: 417
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.295245
+	MESH-	PointCloud Size: 245
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.286256
+	MESH-	PointCloud Size: 252
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.320654
+	MESH-	PointCloud Size: 258
+
+	Frame Number: 607
+	Cloud Size: 443
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.298615
+	MESH-	PointCloud Size: 259
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.294214
+	MESH-	PointCloud Size: 259
+
+	Frame Number: 645
+	Cloud Size: 470
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.304241
+	MESH-	PointCloud Size: 261
+
+/////////MESHING/////////
+	MESH-	Mesh Time: 0.273558
+	MESH-	PointCloud Size: 262
+
+	Frame Number: 684
+	Cloud Size: 488
+
+	Frame Number: 723
+	Cloud Size: 488
+
+	Frame Number: 759
+	Cloud Size: 488
+/////////TOTALS (END OF RUN)/////////
+	Total Run Time: 101.852
+	Total Frames Recieved: 764
+	Cloud Size: 488
