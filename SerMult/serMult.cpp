@@ -3,6 +3,7 @@
 #include <pcl/common/common.h>
 #include <pcl/common/time.h>
 #include <iostream>
+#include <stdio.h>
 #include <sstream>
 #include <boost/asio.hpp>
 #include <mutex>
@@ -13,10 +14,11 @@
 //Points
 #include <pcl/point_types.h>
 #include <pcl/point_cloud.h>
-//Filters
+// Filters
 #include <pcl/filters/radius_outlier_removal.h>
 #include <pcl/filters/statistical_outlier_removal.h>
 #include <pcl/filters/voxel_grid.h>
+#include <pcl/filters/passthrough.h>
 
 //Surfaces
 #include <pcl/surface/mls.h>
@@ -74,6 +76,15 @@ void MLS(double rad, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_downsampled, pcl:
 	mls.process(*mls_points);
 }
 
+void PassThrough(float min, float max, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_passThrough) {
+  // Create the filtering object
+	pcl::PassThrough<pcl::PointXYZ> pass;
+	pass.setInputCloud(cloud);
+	pass.setFilterFieldName("y");
+	pass.setFilterLimits(min, max);
+	pass.filter(*cloud_passThrough);
+}
+
 void projPts(pcl::ModelCoefficients::Ptr coefficients, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_downsampled, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_projected){
 	pcl::ProjectInliers<pcl::PointXYZ> proj;
 	proj.setModelType (pcl::SACMODEL_PLANE);
@@ -82,16 +93,6 @@ void projPts(pcl::ModelCoefficients::Ptr coefficients, pcl::PointCloud<pcl::Poin
 	proj.filter (*cloud_projected);
 }
 
-void voxFilter(float vLeaf, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_projected, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_base_filtered){
-  // create filter instance
- 	pcl::VoxelGrid<pcl::PointXYZ> vox;
- // set input cloud
- 	vox.setInputCloud (cloud_projected);
- // set cell/voxel size to vLeaf meters in each dimension
- 	vox.setLeafSize (vLeaf, vLeaf, vLeaf);
-  // do filtering
- 	vox.filter (*cloud_base_filtered);
-}
 
 void voxFilterNormal(float vLeaf, pcl::PointCloud<pcl::PointNormal>::Ptr cloud_projected, pcl::PointCloud<pcl::PointNormal>::Ptr cloud_base_filtered){
   // create filter instance
@@ -148,7 +149,6 @@ void vtkDec(float rFac, pcl::PolygonMesh::Ptr mesh, pcl::PolygonMesh::Ptr decMes
     dec.process(*decMesh);
 }
 
-//void meshReconstruct(int depth, pcl::PointCloud<pcl::PointNormal>::Ptr cloud_point_normals, pcl::PolygonMesh::Ptr mesh){
 void meshReconstruct(float rFac, int iter, string LogName, int depth, pcl::PointCloud<pcl::PointNormal>::Ptr cloud_point_normals, pcl::PolygonMesh::Ptr mesh, pcl::PolygonMesh::Ptr updateMesh, pcl::PolygonMesh::Ptr smoothedMesh){
 	double start_time = pcl::getTime();
 	pcl::PolygonMesh::Ptr decMesh (new pcl::PolygonMesh());
@@ -157,14 +157,9 @@ void meshReconstruct(float rFac, int iter, string LogName, int depth, pcl::Point
 	boost::mutex::scoped_lock updateLock(updateModelMutex);
 	poisson.setInputCloud(cloud_point_normals);
 	poisson.reconstruct(*updateMesh);
-	//*mesh = *updateMesh;
-	cout << "FINISHED MESH" << endl;
-
-	cout << "- STARTED SMOOTHING" << endl;
 	vtkDec(rFac, updateMesh, decMesh);
 	vtkSmooth(iter, decMesh, smoothedMesh);
-	cout << "- FINISHED SMOOTHING" << endl;
-	*mesh = *updateMesh;
+	*mesh = *smoothedMesh;
 	update = true;
 	double end_time = pcl::getTime ();
 	double meshTime = end_time - start_time;
@@ -232,6 +227,7 @@ void readPoints(int port, string LogName, boost::shared_ptr<string> pointString,
 	boost::asio::read_until(socket, buf, "ENDN\n", err1);
 	if (err1) {
   		cout <<"Error in read_NumPoints" << err1.message() << endl;
+		socket.close();
   		return;
 	}
 	std::istream is(&buf);
@@ -241,89 +237,46 @@ void readPoints(int port, string LogName, boost::shared_ptr<string> pointString,
 	std::stringstream ssNum(data);
 	ssNum >> *numPoints;
 
-//	cout << "NumPoints after assignment = " << *numPoints << endl;
-
-
 // Read Points From Socket
     boost::asio::read_until(socket, buf, "ENDP\n", err);
 	if (err){
   		cout << "Connection Closed On StartUp(" << err.message() <<") - Exiting" << endl;
+		socket.close();
   		return;
 	}
 	std::getline(is, *pointString);
-
-//	cout << *pointString << endl;
 
 	readLock.unlock();
 
 	waitFlag = false;
 	double start_time = pcl::getTime();
   	while(!exitFlag){
-    	//numPoints = 0;
   		data = "";
   		pointStringTemp = "";
   		track++;
 
 		/////////////READ NUMBER OF POINTS TO BE READ////////////////
-	//  	start_time_Read = pcl::getTime();
 		boost::asio::read_until( socket, buf, "ENDN\n", err1);
 		if (err1) {
 	  		cout <<"Error Reading Number of Points: " << err1.message() << endl;
 	  		cout <<"Saving Mesh + Point Cloud And Exiting... " << endl;
+			socket.close();
 	  		exitFlag = true;
-
-	  	/*	if(saveFiles(timeString, mesh, decMesh, smoothedMesh, cloud_point_normals, cloud)){
-	  			cout << "Succesfully Saved 7 Files to " << folName << "." << endl;
-	  		} */
-	/*  		end_time_total = pcl::getTime();
-			totalTime = end_time_total - start_time_total;
-
-	  		Logfile.open(LogName, ios::out | ios::app);
-		    Logfile << "/////////TOTALS (END OF RUN)/////////" << endl;
-			Logfile << "\tTotal Run Time: " << totalTime << endl;
-		  	Logfile << "\tTotal Frames Recieved: " << track << endl;
-		  	Logfile << "\tCloud Size: " << cloudSize_new << endl;
-		  	Logfile.close();
-
-		  	//////////WAIT FOR THREADS TO FINISH/////////
-	  		if(meshThread.joinable())
-			{
-				meshThread.join();
-			} */
 	  		return;
 		} 
 		readLock.lock();
 		std::getline(is, data);
 		std::stringstream ssNum(data);
 		ssNum >> *numPoints;
-//		new_time_Read = pcl::getTime ();
-//	    elapsed_time = new_time_Read - start_time_Read;
-//	    readNumTrack += elapsed_time;
-//	    elapsed_time = 0;
+
 
 		/////////////// READ NEW POINTS FROM SOCKET //////////////////
-//	    start_time_Read = pcl::getTime();
 		boost::asio::read_until(socket, buf, "ENDP\n", err);
 		if (err){
-	  		cout <<"Error Reading New Points: " << err1.message() << endl;
+	  		cout <<"Connection Closed: " << err1.message() << endl;
 	  		cout <<"Saving Mesh + Point Cloud And Exiting... " << endl;
+			socket.close();
 	  		exitFlag = true;
-	  	/*	if(saveFiles(timeString, mesh, decMesh, smoothedMesh, cloud_point_normals, cloud)){
-	  			cout << "Succesfully Saved 7 Files to " << folName << "." << endl;
-	  		}
-	  		end_time_total = pcl::getTime();
-			totalTime = end_time_total - start_time_total;
-
-	  		Logfile.open(LogName, ios::out | ios::app );
-		    Logfile << "/////////TOTALS (END OF RUN)/////////" << endl;
-			Logfile << "\tTotal Run Time: " << totalTime << endl;
-		  	Logfile << "\tTotal Frames Recieved: " << track << endl;
-		  	Logfile << "\tCloud Size: " << cloudSize_new << endl;
-		  	Logfile.close();
-	  		if(meshThread.joinable())
-			{
-				meshThread.join();
-			} */
 			return;
 		}
 
@@ -376,11 +329,13 @@ main (int argc, char** argv)
 
 	pcl::console::parse_argument (argc, argv, "-port", port);
 
+	
 	/////// Create Point Clouds
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ> ());
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloudTemp (new pcl::PointCloud<pcl::PointXYZ> ());
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_downsampled (new pcl::PointCloud<pcl::PointXYZ> ());
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_downsampled2 (new pcl::PointCloud<pcl::PointXYZ> ());
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_cropped(new pcl::PointCloud<pcl::PointXYZ>());
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_projected (new pcl::PointCloud<pcl::PointXYZ>);
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_base_filtered (new pcl::PointCloud<pcl::PointXYZ>);
 	pcl::PointCloud<pcl::PointXYZ>::Ptr mls_points (new pcl::PointCloud<pcl::PointXYZ> ());
@@ -391,6 +346,8 @@ main (int argc, char** argv)
 	pcl::PolygonMesh::Ptr updateMesh (new pcl::PolygonMesh());
 	pcl::PolygonMesh::Ptr smoothedMesh (new pcl::PolygonMesh());
 	pcl::PolygonMesh::Ptr decMesh (new pcl::PolygonMesh());
+
+
 
 	// Initial cloud setup
 	cloud->height = 1;
@@ -409,7 +366,6 @@ main (int argc, char** argv)
 	///////TIMING VARIABLES////////
 	double readNumTrack;
 	double readPointTrack;
-
 	double start_time, end_time = 0;
 	double new_time_Read;
 	double elapsed_time;
@@ -430,14 +386,15 @@ main (int argc, char** argv)
 	double totalTime = 0;
 	double end_time_total = 0;
 
-	int ptStart = 40;
-	int ftStart = 500;
+	int ptStart = 50;
+	int ftStart = 200;
+	int visStart = 5;
 	pcl::console::parse_argument (argc, argv, "-ft", ftStart);
 
 
 	///////FILTER///////
-	int minNei = 10;	// 10 old
-	double radDown = 0.05; // 0.3 old
+	double radDown = 0.1;
+	int minNei = 10;
 	pcl::console::parse_argument (argc, argv, "-rD", radDown);
 	pcl::console::parse_argument (argc, argv, "-mNei", minNei);
 
@@ -450,7 +407,7 @@ main (int argc, char** argv)
 	pcl::console::parse_argument (argc, argv, "-rad", rad);
 
 	///////Normal Estimation///////
-	double neRad = 0.08; // 0.05
+	double neRad = 0.05; // 0.05
 	pcl::console::parse_argument (argc, argv, "-nr", neRad);
 
 	///////STATISTICAL OUTLIER REMOVAL//////
@@ -460,11 +417,11 @@ main (int argc, char** argv)
 	pcl::console::parse_argument (argc, argv, "-mK", mK);
 
 	///////MESHING////////////
-	int depth = 6;
+	int depth = 7;
 	pcl::console::parse_argument (argc, argv, "-d", depth);
 
 	//////////MESH SMOOTHING/////////
-	int iter = 20;
+	int iter = 15;
 	float rFac = 0.6;
 	pcl::console::parse_argument (argc, argv, "-it", iter);
 	pcl::console::parse_argument (argc, argv, "-rFac", rFac);
@@ -478,10 +435,11 @@ main (int argc, char** argv)
   	coefficients->values[0] = coefficients->values[2] = 0;
   	coefficients->values[1] = 1.0;
   	coefficients->values[3] = 0;
+	float yOffset = 1.0;
 
   	/////////// THREADS AVAILABLE /////////////
   	unsigned int nthreads = boost::thread::hardware_concurrency();
-  	cout << "Number of Threads Available: " << nthreads << endl;
+  	//cout << "Number of Threads Available: " << nthreads << endl;
 
   	string pointStringRun = "";
 
@@ -495,14 +453,19 @@ main (int argc, char** argv)
   	time (&rawtime);
   	timeinfo = localtime(&rawtime);
 
-  	strftime(timeChar,80,"%I_%M_%S",timeinfo);
+  	strftime(timeChar,80,"%I_%M",timeinfo);
   	std::string timeString(timeChar);
 
-  	std::string folName = "./"+timeString;
-  	std::string LogName = folName+"//Log_"+timeString+".txt";
+  	std::string folName = "F:\\Viv\\Documents\\Uni\\sem1_2019\\FYP\\MESHROOM_LIVESCAN\\Work\\"+timeString;
+  	std::string LogName = folName+"\\Log_"+timeString+".txt";
   	boost::filesystem::create_directories(folName);
 
-
+	//char fileChar [50]
+	string fileWrite = "start python c:\\server\\run_meshroom.py  " + timeString + " & ";
+	char *cstr = new char[fileWrite.length() + 1];
+	strcpy(cstr, fileWrite.c_str());
+	int batch_exit_code = system(cstr);
+	delete[] cstr;
 	ofstream Logfile;
 	Logfile.open(LogName, ios::out | ios::trunc);
 	Logfile << "/////////RADIUS OUTLIER REMOVAL/////////" << endl;
@@ -529,10 +492,7 @@ main (int argc, char** argv)
 		std::this_thread::sleep_for(1ms);
 	}
 	int numPointsRun = *numPoints;
-//	cout << "Num Points in MAIN: " << numPointsRun << endl;;
-
 	pointStringRun = *pointString;
-//	cout << "Points in MAIN: " << pointStringRun << endl;
 
 	std::stringstream ssPoints(pointStringRun);
 
@@ -555,17 +515,18 @@ main (int argc, char** argv)
   	compute3DCentroid(*cloud, centroid);
 
 
-  	int m(0);
 	int pN(0);
 	int p(0);
-	int pT(0);
 
 	boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer;
 	viewer = boost::make_shared<pcl::visualization::PCLVisualizer>( "Point Cloud Viewer");
 	viewer->createViewPort (0.0, 0.0, 0.5, 1.0, pN);
-	//viewer->createViewPort (0.34, 0.0, 0.66, 1.0, m);
+	string polyText = "Vertex Count: " + std::to_string(mesh->polygons.size());
+	viewer->addText(polyText, 10, 10, "MeshText", pN);
+
 	viewer->createViewPort (0.5, 0.0, 1.0, 1.0, p);
-	pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> single_color(cloud, 0, 255, 0);
+	string pointText = "Point Count: " + std::to_string(preMesh->points.size());
+	viewer->addText(pointText, 10, 10, "CloudText", p);
   	viewer->setBackgroundColor (0, 0, 0);
   	viewer->addPointCloud<pcl::PointXYZ> (cloud, "pts",p);
   	viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 4,"pts");
@@ -584,289 +545,240 @@ main (int argc, char** argv)
     {
       	track++;
 
-    if(newPoints){
-    	boost::mutex::scoped_lock readLock(readPointsMutex); 	
-    	pointStringRun = *pointString;
-		std::stringstream ssPoints(pointStringRun);
-		int numPointsRun = *numPoints;
-	/*	cout << "Num Points in MAIN: " << numPointsRun << endl;
-		cout << "Points in MAIN: " << pointStringRun << endl;
-		cout << "Cloud Size: " << cloud->points.size() << endl;*/
-		newPoints = false;
-		readLock.unlock();
-		new_time_Read = pcl::getTime ();
-        elapsed_time = new_time_Read - start_time_Read;
-        readPointTrack += elapsed_time;
-        readINT++;
-        elapsed_time = 0;
-		cloudSize_old = cloud->points.size();
+		if(newPoints){
+    		boost::mutex::scoped_lock readLock(readPointsMutex); 	
+    		pointStringRun = *pointString;
+			std::stringstream ssPoints(pointStringRun);
+			int numPointsRun = *numPoints;
+			newPoints = false;
+			readLock.unlock();
+			new_time_Read = pcl::getTime ();
+			elapsed_time = new_time_Read - start_time_Read;
+			readPointTrack += elapsed_time;
+			readINT++;
+			elapsed_time = 0;
+			cloudSize_old = cloud->points.size();
 
-		////////////////////HANDLE POINTS///////////////////////////
-		int rep = 0;
-		int tFlag = 0;
-		double start_time_Handle = pcl::getTime();
-		ssPoints >> coefficients->values[3];
-		ssPoints >> camPos[0];
-		ssPoints >> camPos[1];
-		ssPoints >> camPos[2];
-		for (size_t i = 0; i < numPointsRun; ++i)
-			{
-				ssPoints >> idTemp;
-				for(size_t j=0; j < cloudSize_old; ++j)
+			////////////////////HANDLE POINTS///////////////////////////
+			int rep = 0;
+			int tFlag = 0;
+			double start_time_Handle = pcl::getTime();
+			ssPoints >> coefficients->values[3];
+			ssPoints >> camPos[0];
+			ssPoints >> camPos[1];
+			ssPoints >> camPos[2];
+			for (size_t i = 0; i < numPointsRun; ++i)
 				{
-					if (idTemp == idVec.at(j))
+					ssPoints >> idTemp;
+					for(size_t j=0; j < cloudSize_old; ++j)
 					{
-						cloud->points[j].x = 0;
-						cloud->points[j].y= 0;
-						cloud->points[j].z = 0;
-						ssPoints >> cloud->points[j].x;
-						ssPoints >> cloud->points[j].y;
-						ssPoints >> cloud->points[j].z;
-						rep++;
-						tFlag = 1;
+						if (idTemp == idVec.at(j))
+						{
+							cloud->points[j].x = 0;
+							cloud->points[j].y= 0;
+							cloud->points[j].z = 0;
+							ssPoints >> cloud->points[j].x;
+							ssPoints >> cloud->points[j].y;
+							ssPoints >> cloud->points[j].z;
+							rep++;
+							tFlag = 1;
+						}
+					}
+					if (tFlag != 1)
+					{
+						idVec.push_back(idTemp);
+						pcl::PointXYZ point;
+						ssPoints >> point.x;
+						ssPoints >> point.y;
+						ssPoints >> point.z;
+						cloud->points.push_back(point);
+						tFlag = 0;
 					}
 				}
-				if (tFlag != 1)
-				{
-					idVec.push_back(idTemp);
-					pcl::PointXYZ point;
-					ssPoints >> point.x;
-					ssPoints >> point.y;
-					ssPoints >> point.z;
-					cloud->points.push_back(point);
-					tFlag = 0;
+			cloud->width = (uint32_t) cloud->points.size();
+			cloudSize_new = cloud->points.size();
+			rep = 0;
+
+			double new_time_Handle = pcl::getTime();
+			elapsed_time = new_time_Handle -start_time_Handle;
+			handleTrack += elapsed_time; 
+			elapsed_time = 0;
+
+
+			if ((cloudSize_new != cloudSize_old) && cloud->points.size() > ptStart) // ONLY RE-MESH IF CLOUD HAS BEEN UPDATED
+			{
+				//////////// REMOVE  OUTLIERS ////////////
+				start_time = pcl::getTime();
+				if (cloud->points.size() < 1000){
+					mK = cloud->points.size();
+					stdDev = 2;
 				}
-			}
-		cloud->width = (uint32_t) cloud->points.size();
-		cloudSize_new = cloud->points.size();
-		rep = 0;
 
-		/*Eigen::Vector4f centroid;
-		compute3DCentroid(*cloud, centroid); */
-
-		double new_time_Handle = pcl::getTime();
-		elapsed_time = new_time_Handle -start_time_Handle;
-		handleTrack += elapsed_time; 
-		elapsed_time = 0;
-
-
-		if ((cloudSize_new != cloudSize_old) && cloud->points.size() > ptStart) // ONLY RE-MESH IF CLOUD HAS BEEN UPDATED
-		{
-			//////////// REMOVE  OUTLIERS ////////////
-			start_time = pcl::getTime();
-			if (cloud->points.size() < 1000){
-				mK = cloud->points.size();
-				stdDev = 2;
-			}
-
-			if (cloud->points.size() > 1000){
-				mK = 600;
-				stdDev = 2;
-			}
-
-			if (cloud->points.size() > 2000){
-				mK = 400;
-				stdDev = 2;
-			}
-
-			if (cloud->points.size() > 3000){
-				mK = 1000;
-				stdDev = 2;
-			}
-
-			//statOutlier(mK,stdDev, cloud, cloud_downsampled);
-			end_time = pcl::getTime ();
-			double elapsed_Stat = end_time - start_time;
-
-
-			///////////////FILTER//////////////
-		  	if (cloud->points.size() > ftStart)
-		  	{
-	 			start_time = pcl::getTime ();
-	 			/// CLEAR POINT CLOUDS /////
-	 			cloud_downsampled2->width = cloud_downsampled2->height = 0;
-	 			cloud_downsampled2->clear();
-
-				radDown = 0.1;
-				minNei = 5;
-				
-				if (cloud->points.size() > 2000){				
-				minNei = floor(1.25*minNei);
+				if (cloud->points.size() > 1000){
+					mK = 1000;
+					stdDev = 2;
 				}
+
+				if (cloud->points.size() > 2000){
+					mK = 400;
+					stdDev = 2;
+				}
+
 				if (cloud->points.size() > 3000){
-				minNei = minNei*2;
+					mK = 1000;
+					stdDev = 2;
 				}
 
-				FilterPoints(radDown, minNei, cloud, cloud_downsampled2);
-	 			end_time = pcl::getTime ();
-	 			elapsed_rad = end_time - start_time;
-	 		}
-			///////////////////////////////////////
-
-			////////////PROJECT INLIERS TO PLANE///////////
-	  		if (cloud->points.size() > ftStart)
-		 	{
-		 		projPts(coefficients, cloud_downsampled2, cloud_projected);
-		 	}
-		 	else
-		 	{
-		 		projPts(coefficients, cloud, cloud_projected);
-		 	}
-		 	//////////////////////////////////////////////
+				//statOutlier(mK,stdDev, cloud, cloud_downsampled);
+				end_time = pcl::getTime ();
+				double elapsed_Stat = end_time - start_time;
 
 
-		 	////////////DOWNSAMPLE BASE POINTS///////////
-
-		 	voxFilter(vLeaf,cloud_projected, cloud_base_filtered);
-
-		 	/////////////////////////////////////////////
-
-			if (cloud->points.size() > ftStart)
-		 	{
-		 		*cloud_base_filtered += *cloud_downsampled2;
-		 	}
-		 	else
-		 	{
-		 		*cloud_base_filtered += *cloud;
-		 	}
+				///////////////FILTER//////////////
+		  		if (cloud->points.size() > ftStart)
+		  		{
+	 				start_time = pcl::getTime ();
+	 				/// CLEAR POINT CLOUDS /////
+	 				cloud_downsampled2->width = cloud_downsampled2->height = 0;
+	 				cloud_downsampled2->clear();
 
 
-			/////////////MLS SMOOTHING////////////
-	 		start_time = pcl::getTime();
-	 		//// CLEAR POINT CLOUDS /////
-	 	 	mls_points->width = mls_points->height = 0;
-	 		mls_points->clear();
-	 		MLS(rad, cloud_base_filtered, cloudTemp);
-	 		MLS(rad, cloudTemp, mls_points);
-		  	end_time = pcl::getTime ();
-		  	elapsed_mlsNoNormal = end_time - start_time;
-			//////////////////////////////////////
+				
+					if (cloud->points.size() > 1200){				
+					minNei = floor(1*minNei);
+					}
+					if (cloud->points.size() > 1400){
+					minNei = floor(minNei*1);
+					}
+					if (cloud->points.size() > 2000) {
+						minNei = floor(minNei*1.6);
+						radDown = 2 * radDown;
+					}
+
+					FilterPoints(radDown, minNei, cloud, cloud_downsampled2);
+	 				end_time = pcl::getTime ();
+	 				elapsed_rad = end_time - start_time;
+	 			}
+				///////////////////////////////////////
+
+				////////////REMOVE POINTS BELOW PLANE///////////
+				float yMin = coefficients->values[3];
+				yMin = -1 * yMin;
+				yMin += 0.015;
+				float yMax = yMin + yOffset;
+			//	cout << "Y_MIN = " << yMin << endl;
+				if (cloud->points.size() > ftStart)
+				{
+					PassThrough(yMin, yMax, cloud_downsampled2, cloud_cropped);
+				}
+				else
+				{
+					PassThrough(yMin, yMax, cloud, cloud_cropped);
+				}
+				////////////////////////////////////////////////
+
+				////////////PROJECT INLIERS TO PLANE///////////
+				if (cloud_cropped->points.size() > 0) {
+					projPts(coefficients, cloud_cropped, cloud_projected);
+				}
+				else {
+					continue;
+				}
+		 		//////////////////////////////////////////////
 
 
-			////////////EST NORMALS//////////////
-	  		start_time = pcl::getTime();
-	  		//// CLEAR POINT CLOUDS /////
-	  	 	cloud_normals->width = cloud_normals->height = 0;
-	 		cloud_normals->clear();
-	 		cloud_point_normals->width = cloud_point_normals->height = 0;
-	 		cloud_point_normals->clear();
-			estNormals(neRad, mls_points, cloud_normals);
-//			pcl::concatenateFields(*mls_points,*cloud_normals, *cloud_point_normals);
-			pcl::concatenateFields(*mls_points,*cloud_normals, *cloud_point_normals);
-			end_time = pcl::getTime ();
-			elapsed_Normal = end_time - start_time;
-			////////////////////////////////////
-			Eigen::Vector4f centroid;
-			compute3DCentroid(*cloud, centroid);
+					*cloud_cropped += *cloud_projected;
 
-			voxFilterNormal(vLeaf,cloud_point_normals, preMesh);
 
-			if(update || meshINT == 0){	
+				/////////////MLS SMOOTHING////////////
+	 			start_time = pcl::getTime();
+	 			//// CLEAR POINT CLOUDS /////
+	 	 		mls_points->width = mls_points->height = 0;
+	 			mls_points->clear();
+	 			MLS(rad, cloud_cropped, cloudTemp);
+	 			MLS(rad, cloudTemp, mls_points);
+		  		end_time = pcl::getTime ();
+		  		elapsed_mlsNoNormal = end_time - start_time;
+				//////////////////////////////////////
 
-			/*	viewer->removeAllPointClouds();
-				pcl::visualization::PointCloudColorHandlerCustom<pcl::PointNormal> single_color(preMesh, 0, 255, 0);
-			//	pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> single_color2(cloud, 255, 255, 255);
-	    		//viewer->addPolygonMesh(*mesh,"Poisson",m);
-	    		viewer->addPolygonMesh(*smoothedMesh,"Smoothed Mesh",p);
-	    		viewer->addPointCloud<pcl::PointNormal> (preMesh, single_color, "Output", pN);
-	  		//	viewer->addPointCloud<pcl::PointXYZ> (cloud, single_color2, "pts", p);
-	  			viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 4,"Output");
-	     	//	viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 4,"pts");
-	  			viewer->setCameraPosition(camPos[0],camPos[1],camPos[2], centroid[0], centroid[1], centroid[2], 0,1,0);
-	  			viewer->spinOnce(); */
-	  			update = false;
-				if(meshThread.joinable())
-				{	start_time = pcl::getTime();
-					meshThread.join();
-					end_time = pcl::getTime ();
-					elapsed_Mesh = end_time - start_time;
-					cout << "PAUSE-\tWaited for: " << elapsed_Mesh << " seconds" << endl;
-					cout << "PAUSE-\tPointCloud Size: " << cloudSize_new << endl;
-				}	
-				//meshThread = boost::thread(meshReconstruct,rFac, iter, LogName, depth, cloud_point_normals, mesh, updateMesh, smoothedMesh);
-				meshThread = boost::thread(meshReconstruct,rFac, iter, LogName, depth, preMesh, mesh, updateMesh, smoothedMesh);
-				cout << "STARTED MESH" << endl;
-				meshINT++;
+
+				////////////EST NORMALS//////////////
+	  			start_time = pcl::getTime();
+	  			//// CLEAR POINT CLOUDS /////
+	  	 		cloud_normals->width = cloud_normals->height = 0;
+	 			cloud_normals->clear();
+	 			cloud_point_normals->width = cloud_point_normals->height = 0;
+	 			cloud_point_normals->clear();
+				estNormals(neRad, mls_points, cloud_normals);
+				pcl::concatenateFields(*mls_points,*cloud_normals, *cloud_point_normals);
+				end_time = pcl::getTime ();
+				elapsed_Normal = end_time - start_time;
+				////////////////////////////////////
+
+				if (cloud_point_normals->points.size() > ftStart * 2) {
+					voxFilterNormal(vLeaf, cloud_point_normals, preMesh);
+				}
+				else {
+					*preMesh = *cloud_point_normals;
+				}
+
+				if(update || meshINT == 0){	
+
+					if (meshThread.joinable())
+					{
+						start_time = pcl::getTime();
+						meshThread.join();
+						end_time = pcl::getTime();
+						elapsed_Mesh = end_time - start_time;
+					}
+					meshThread = boost::thread(meshReconstruct,rFac, iter, LogName, depth, preMesh, mesh, updateMesh, smoothedMesh);
+					meshINT++;
+					update = false;
+				}
 			}
 		}
-	}
-			/////////////////////////////////////
-	//	}
 
-		/////////////VIEWER////////////////////////////
-/*		if (update){
-			viewer->removeAllPointClouds();
-			if (cloud->points.size() > ptStart )
-			{ 
-			pcl::visualization::PointCloudColorHandlerCustom<pcl::PointNormal> single_color(cloud_point_normals, 0, 255, 0);
-			pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> single_color2(cloud, 255, 255, 255);
-    		viewer->addPolygonMesh(*mesh,"Poisson",m);
-    		viewer->addPointCloud<pcl::PointNormal> (cloud_point_normals, single_color, "Output", pN);
-  			viewer->addPointCloud<pcl::PointXYZ> (cloud, single_color2, "pts", p);
-  			viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 4,"Output");
-     		viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 4,"pts");
-  			}
-  			else 
-  			{	
-  			pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> single_color2(cloud, 0, 255, 0);
-  			viewer->addPointCloud<pcl::PointXYZ> (cloud, single_color2, "pts", p);
-  			}
-  			update = false;
-		} */
-	//	if(update == false)
-	//	{
-			if (cloud->points.size() > ptStart )
-			{ 
-			viewer->removeAllPointClouds();
-			//viewer->removePointCloud("Output");
-			//pcl::visualization::PointCloudColorHandlerCustom<pcl::PointNormal> single_color(preMesh, 0, 255, 0);
-    		//viewer->addPointCloud<pcl::PointNormal> (preMesh, single_color, "Output", pN);
-			viewer->addPolygonMesh(*smoothedMesh, "Smoothed Mesh", pN);
-			viewer->addPointCloud<pcl::PointNormal>(preMesh, "Output", p);
 
-		//	pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> single_color2(cloud, 255, 255, 255);
-  		//	viewer->addPointCloud<pcl::PointXYZ> (cloud, single_color2, "pts", p);
+		if (mesh->polygons.size() > visStart )
+		{
+		//Calculate Centroid of displayed model	
+		Eigen::Vector4f centroid;
+		compute3DCentroid(*preMesh, centroid);
+		viewer->removeAllPointClouds();
+		viewer->addPolygonMesh(*mesh, "Smoothed Mesh", pN);
+		polyText = "Vertex Count: " + std::to_string(mesh->polygons.size());
+		viewer->updateText(polyText,10,10, "MeshText");
+		viewer->addPointCloud<pcl::PointNormal>(preMesh, "Output", p);
+		pointText = "Point Count: " + std::to_string(preMesh->points.size());
+		viewer->updateText(pointText, 10, 10, "CloudText");
+  		viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 4,"Output");
+		}
+  		else 
+  		{
+		Eigen::Vector4f centroid;
+		compute3DCentroid(*cloud, centroid);
 
-  			viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 4,"Output");
-     	//	viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 4,"pts");
-  			}
-  			else 
-  			{
-  			viewer->removePointCloud("pts");	
-  		//	pcl::visualization::PointCloudColorHandlerCustom<pcl::PointXYZ> single_color2(cloud, 0, 255, 0);
-  			viewer->addPointCloud<pcl::PointXYZ> (cloud,  "pts", p);
-  			viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 4,"pts");
-  			}
-  			// viewer->setCameraPosition(camPos[0],camPos[1],camPos[2], centroid[0], centroid[1], centroid[2], 0,1,0);
-	 		//viewer->spinOnce();
-	//	}
+  		viewer->removePointCloud("pts");
+		viewer->addPointCloud<pcl::PointXYZ> (cloud,  "pts", p);
+		pointText = "Point Count: " + std::to_string(cloud->points.size());
+		viewer->updateText(pointText, 10, 10, "CloudText");
+  		viewer->setPointCloudRenderingProperties (pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 4,"pts");
+  		}
 
-     	viewer->setCameraPosition(camPos[0],camPos[1],camPos[2], centroid[0], centroid[1], centroid[2], 0,1,0);
-	 	viewer->spinOnce();
+		if (!exitFlag) {
+			viewer->setCameraPosition(camPos[0], camPos[1], camPos[2], centroid[0], centroid[1], centroid[2], 0, 1, 0);
+		}
+		viewer->spinOnce();
 
 	 	counter++;
         double new_time = pcl::getTime ();
         elapsed_time = new_time - start_time_master;
         if (elapsed_time > 5.0)
         {       
-        // Average Read Times
-        /*  	double readNumAv = readNumTrack / readINT;
-          	double readPointAv = readPointTrack / readINT;
-          	double handleAv = handleTrack / readINT;
-          	double meshAV = elapsed_Mesh / meshINT; */
-    /*      	cout << "\tRead Num Points Average Time: " << readNumAv << endl;
-          	cout << "\tRead Points In Average Time: " << readPointAv << endl;
-          	cout << "\tHandle PointCloud Average Time: " << handleAv << endl;
-//          	cout << "\tMesh Average Time: " << handleAv << endl; */
-
           	Logfile.open(LogName, ios::out | ios::app);
           	Logfile << "\n\tFrame Number: " << track << endl;
           	Logfile << "\tCloud Size: " << cloudSize_new << endl;
-       //   	Logfile << "\tRead Num Points Average Time: " << readNumAv << endl;
-        //  	Logfile << "\tRead Points In Average Time: " << readPointAv << endl;
-         // 	Logfile << "\tHandle PointCloud Average Time: " << handleAv << endl;
-
-//          	Logfile << "\tMesh Average Time: " << handleAv << endl;
+			Logfile << "\tFiltered Cloud Size: " << preMesh->points.size() << endl;
           	Logfile.close();
           	double frames_per_second = counter / elapsed_time;
           	start_time_master = new_time;
@@ -878,10 +790,17 @@ main (int argc, char** argv)
     //    meshThread.join();
 	}
 
-	if(saveFiles(timeString, mesh, decMesh, smoothedMesh, preMesh, cloud)){
+	if (meshThread.joinable())
+	{
+		meshThread.join();
+	}
+	if (preMesh->points.size() > 100) {
+		meshThread = boost::thread(meshReconstruct, rFac, iter, LogName, 9, preMesh, mesh, updateMesh, smoothedMesh);
+		meshThread.join();
+	}
+	if(saveFiles(timeString, updateMesh, decMesh, smoothedMesh, preMesh, cloud)){
 	  	cout << "Succesfully Saved 7 Files to " << folName << "." << endl;
 	  		}
-
     end_time_total = pcl::getTime();
     totalTime = end_time_total - start_time_total;
     //WRITE TO FILE
