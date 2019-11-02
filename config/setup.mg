@@ -4,19 +4,18 @@
         "releaseVersion": "2019.2.0",
         "fileVersion": "1.1",
         "nodesVersions": {
-            "FeatureExtraction": "1.1",
-            "ImageMatching": "1.0",
-            "PrepareDenseScene": "3.0",
             "StructureFromMotion": "2.0",
-            "DepthMapFilter": "3.0",
-            "Texturing": "5.0",
-            "Meshing": "3.0",
-            "MeshDecimate": "1.0",
-            "Publish": "1.1",
-            "DepthMap": "2.0",
             "CameraInit": "2.0",
+            "Texturing": "5.0",
             "FeatureMatching": "2.0",
-            "MeshFiltering": "2.0"
+            "MeshFiltering": "2.0",
+            "Meshing": "3.0",
+            "ImageMatching": "1.0",
+            "DepthMap": "2.0",
+            "PrepareDenseScene": "3.0",
+            "Publish": "1.1",
+            "FeatureExtraction": "1.1",
+            "DepthMapFilter": "3.0"
         }
     },
     "graph": {
@@ -367,8 +366,8 @@
         "Texturing_1": {
             "nodeType": "Texturing",
             "position": [
-                1748,
-                5
+                1594,
+                6
             ],
             "parallelization": {
                 "blockSize": 0,
@@ -376,13 +375,13 @@
                 "split": 1
             },
             "uids": {
-                "0": "f7c5ce3094ca5a18b9a4f5a8af7d15efdddfaa91"
+                "0": "0f46e830c063b6232a8ba5a8e329af0af2c9a845"
             },
             "internalFolder": "{cache}/{nodeType}/{uid0}/",
             "inputs": {
                 "input": "{Meshing_1.output}",
                 "imagesFolder": "{DepthMap_1.imagesFolder}",
-                "inputMesh": "{MeshDecimate_1.output}",
+                "inputMesh": "{MeshFiltering_1.outputMesh}",
                 "textureSide": 8192,
                 "downscale": 1,
                 "outputTextureFileType": "png",
@@ -412,34 +411,6 @@
                 "outputMesh": "{cache}/{nodeType}/{uid0}/texturedMesh.obj",
                 "outputMaterial": "{cache}/{nodeType}/{uid0}/texturedMesh.mtl",
                 "outputTextures": "{cache}/{nodeType}/{uid0}/texture_*.{outputTextureFileTypeValue}"
-            }
-        },
-        "MeshDecimate_1": {
-            "nodeType": "MeshDecimate",
-            "position": [
-                1566,
-                0
-            ],
-            "parallelization": {
-                "blockSize": 0,
-                "size": 1,
-                "split": 1
-            },
-            "uids": {
-                "0": "0a0141e177198c76dd87356dc118fc0ce503d943"
-            },
-            "internalFolder": "{cache}/{nodeType}/{uid0}/",
-            "inputs": {
-                "input": "{MeshFiltering_1.outputMesh}",
-                "simplificationFactor": 0.5,
-                "nbVertices": 0,
-                "minVertices": 0,
-                "maxVertices": 100000,
-                "flipNormals": false,
-                "verboseLevel": "info"
-            },
-            "outputs": {
-                "output": "{cache}/{nodeType}/{uid0}/mesh.obj"
             }
         },
         "MeshFiltering_1": {
@@ -472,8 +443,8 @@
         "Publish_1": {
             "nodeType": "Publish",
             "position": [
-                1928,
-                10
+                1770,
+                15
             ],
             "parallelization": {
                 "blockSize": 0,
@@ -481,7 +452,7 @@
                 "split": 1
             },
             "uids": {
-                "0": "19590874693074a2c88df6837ccb7c7dc5aec73b"
+                "0": "3efc9335dd5ee3a1c497f96bb0a1e0c8fc32d4ce"
             },
             "internalFolder": "{cache}/{nodeType}/{uid0}/",
             "inputs": {

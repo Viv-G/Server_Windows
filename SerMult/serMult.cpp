@@ -93,6 +93,17 @@ void projPts(pcl::ModelCoefficients::Ptr coefficients, pcl::PointCloud<pcl::Poin
 	proj.filter (*cloud_projected);
 }
 
+void voxFilter(float vLeaf, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_downsampled) {
+	// create filter instance
+	pcl::VoxelGrid<pcl::PointXYZ> vox;
+	// set input cloud
+	vox.setInputCloud(cloud);
+	// set cell/voxel size to vLeaf meters in each dimension
+	vox.setLeafSize(vLeaf, vLeaf, vLeaf);
+	// do filtering
+	vox.filter(*cloud_downsampled);
+}
+
 
 void voxFilterNormal(float vLeaf, pcl::PointCloud<pcl::PointNormal>::Ptr cloud_projected, pcl::PointCloud<pcl::PointNormal>::Ptr cloud_base_filtered){
   // create filter instance
@@ -174,14 +185,14 @@ void meshReconstruct(float rFac, int iter, string LogName, int depth, pcl::Point
 
 
 bool saveFiles(string timeString, pcl::PolygonMesh::Ptr mesh, pcl::PolygonMesh::Ptr decMesh, pcl::PolygonMesh::Ptr smoothedMesh, pcl::PointCloud<pcl::PointNormal>::Ptr cloud_point_normals, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud){
-	string folName = "./"+timeString;
-	std::string ptString = folName + "//points.pcd";
-	std::string pointString = folName + "//PointsFilt.pcd";
-  	std::string meshString = folName + "//mesh.vtk";
-  	std::string meshString2 = folName + "//model.stl";
-  	std::string meshString3 = folName + "//decMesh.vtk";
-  	std::string meshString4 = folName + "//smoothedMesh.vtk";
-  	std::string meshString5 = folName + "//smoothedMesh.stl";
+	std::string folName = "F:\\Viv\\Documents\\Uni\\sem1_2019\\FYP\\MESHROOM_LIVESCAN\\Work\\" + timeString;
+	std::string ptString = folName + "\\points.pcd";
+	std::string pointString = folName + "\\PointsFilt.pcd";
+  	std::string meshString = folName + "\\mesh.vtk";
+  	std::string meshString2 = folName + "\\model.stl";
+  	std::string meshString3 = folName + "\\decMesh.vtk";
+  	std::string meshString4 = folName + "\\smoothedMesh.vtk";
+  	std::string meshString5 = folName + "\\smoothedMesh.stl";
 
 	pcl::io::savePCDFile (pointString, *cloud_point_normals);
 	pcl::io::savePCDFile (ptString, *cloud);
@@ -394,7 +405,7 @@ main (int argc, char** argv)
 
 	///////FILTER///////
 	double radDown = 0.1;
-	int minNei = 10;
+	int minNei = 8;
 	pcl::console::parse_argument (argc, argv, "-rD", radDown);
 	pcl::console::parse_argument (argc, argv, "-mNei", minNei);
 
@@ -607,7 +618,7 @@ main (int argc, char** argv)
 
 			if ((cloudSize_new != cloudSize_old) && cloud->points.size() > ptStart) // ONLY RE-MESH IF CLOUD HAS BEEN UPDATED
 			{
-				//////////// REMOVE  OUTLIERS ////////////
+			/*	//////////// REMOVE  OUTLIERS ////////////
 				start_time = pcl::getTime();
 				if (cloud->points.size() < 1000){
 					mK = cloud->points.size();
@@ -631,12 +642,14 @@ main (int argc, char** argv)
 
 				//statOutlier(mK,stdDev, cloud, cloud_downsampled);
 				end_time = pcl::getTime ();
-				double elapsed_Stat = end_time - start_time;
+				double elapsed_Stat = end_time - start_time; */
 
 
 				///////////////FILTER//////////////
 		  		if (cloud->points.size() > ftStart)
 		  		{
+				//	voxFilter(vLeaf, cloud, cloud_downsampled);
+
 	 				start_time = pcl::getTime ();
 	 				/// CLEAR POINT CLOUDS /////
 	 				cloud_downsampled2->width = cloud_downsampled2->height = 0;
@@ -650,12 +663,13 @@ main (int argc, char** argv)
 					if (cloud->points.size() > 1400){
 					minNei = floor(minNei*1);
 					}
-					if (cloud->points.size() > 2000) {
+					if (cloud->points.size() > 4000) {
 						minNei = floor(minNei*1.6);
 						radDown = 2 * radDown;
 					}
 
 					FilterPoints(radDown, minNei, cloud, cloud_downsampled2);
+
 	 				end_time = pcl::getTime ();
 	 				elapsed_rad = end_time - start_time;
 	 			}
@@ -717,6 +731,7 @@ main (int argc, char** argv)
 
 				if (cloud_point_normals->points.size() > ftStart * 2) {
 					voxFilterNormal(vLeaf, cloud_point_normals, preMesh);
+					//*preMesh = *cloud_point_normals;
 				}
 				else {
 					*preMesh = *cloud_point_normals;
@@ -730,10 +745,12 @@ main (int argc, char** argv)
 						meshThread.join();
 						end_time = pcl::getTime();
 						elapsed_Mesh = end_time - start_time;
+						
 					}
-					meshThread = boost::thread(meshReconstruct,rFac, iter, LogName, depth, preMesh, mesh, updateMesh, smoothedMesh);
+					meshThread = boost::thread(meshReconstruct, rFac, iter, LogName, depth, preMesh, mesh, updateMesh, smoothedMesh);
 					meshINT++;
 					update = false;
+					
 				}
 			}
 		}
@@ -798,7 +815,7 @@ main (int argc, char** argv)
 		meshThread = boost::thread(meshReconstruct, rFac, iter, LogName, 9, preMesh, mesh, updateMesh, smoothedMesh);
 		meshThread.join();
 	}
-	if(saveFiles(timeString, updateMesh, decMesh, smoothedMesh, preMesh, cloud)){
+	if(saveFiles(timeString, updateMesh, decMesh, mesh, preMesh, cloud)){
 	  	cout << "Succesfully Saved 7 Files to " << folName << "." << endl;
 	  		}
     end_time_total = pcl::getTime();
